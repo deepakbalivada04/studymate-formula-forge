@@ -1,53 +1,55 @@
 import React, { useState } from 'react';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { MathJax, MathJaxContext } from 'better-react-mathjax';
-import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Loader2, Save, AlertCircle } from 'lucide-react';
+import Latex from 'react-latex';
+import { formulaService } from '../lib/services/formulaService';
+import type { CreateFormulaInput } from '../types/formula';
 
-interface FormulaEditorProps {
-  onSave: (formula: {
-    name: string;
-    expression: string;
-    description: string;
-    subject: string;
-    category: string;
-  }) => void;
-  initialData?: {
-    name: string;
-    expression: string;
-    description: string;
-    subject: string;
-    category: string;
-  };
-}
-
-export function FormulaEditor({ onSave, initialData }: FormulaEditorProps) {
-  const [formula, setFormula] = useState({
-    name: initialData?.name || '',
-    expression: initialData?.expression || '',
-    description: initialData?.description || '',
-    subject: initialData?.subject || '',
-    category: initialData?.category || '',
+export function FormulaEditor() {
+  const [formula, setFormula] = useState<CreateFormulaInput>({
+    name: '',
+    expression: '',
+    description: '',
+    subject: 'mathematics',
+    category: 'General'
   });
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formula.name || !formula.expression || !formula.subject) {
-      toast.error('Please fill in all required fields');
-      return;
+    setIsSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await formulaService.createFormula(formula);
+      setSuccess('Formula saved successfully!');
+      setFormula({
+        name: '',
+        expression: '',
+        description: '',
+        subject: 'mathematics',
+        category: 'General'
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save formula');
+    } finally {
+      setIsSaving(false);
     }
-    onSave(formula);
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Formula Editor</CardTitle>
+        <CardTitle>Create New Formula</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -63,57 +65,21 @@ export function FormulaEditor({ onSave, initialData }: FormulaEditorProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="subject">Subject</Label>
-            <Select
-              value={formula.subject}
-              onValueChange={(value) => setFormula({ ...formula, subject: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select subject" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="physics">Physics</SelectItem>
-                <SelectItem value="chemistry">Chemistry</SelectItem>
-                <SelectItem value="mathematics">Mathematics</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-            <Input
-              id="category"
-              value={formula.category}
-              onChange={(e) => setFormula({ ...formula, category: e.target.value })}
-              placeholder="Enter category"
+            <Label htmlFor="expression">LaTeX Expression</Label>
+            <Textarea
+              id="expression"
+              value={formula.expression}
+              onChange={(e) => setFormula({ ...formula, expression: e.target.value })}
+              placeholder="Enter LaTeX formula (e.g., E = mc^2)"
+              required
+              className="font-mono"
             />
-          </div>
-
-          <Tabs defaultValue="edit" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="edit">Edit</TabsTrigger>
-              <TabsTrigger value="preview">Preview</TabsTrigger>
-            </TabsList>
-            <TabsContent value="edit" className="space-y-2">
-              <Label htmlFor="expression">Formula Expression (LaTeX)</Label>
-              <Textarea
-                id="expression"
-                value={formula.expression}
-                onChange={(e) => setFormula({ ...formula, expression: e.target.value })}
-                placeholder="Enter LaTeX formula (e.g., E = mc^2)"
-                className="min-h-[100px] font-mono"
-                required
-              />
-            </TabsContent>
-            <TabsContent value="preview" className="space-y-2">
-              <Label>Preview</Label>
-              <div className="min-h-[100px] p-4 border rounded-md bg-muted">
-                <MathJaxContext>
-                  <MathJax>{`$${formula.expression}$`}</MathJax>
-                </MathJaxContext>
+            {formula.expression && (
+              <div className="p-4 bg-muted rounded-lg">
+                <Latex>{formula.expression}</Latex>
               </div>
-            </TabsContent>
-          </Tabs>
+            )}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
@@ -122,12 +88,66 @@ export function FormulaEditor({ onSave, initialData }: FormulaEditorProps) {
               value={formula.description}
               onChange={(e) => setFormula({ ...formula, description: e.target.value })}
               placeholder="Enter formula description"
-              className="min-h-[100px]"
+              rows={3}
             />
           </div>
 
-          <Button type="submit" className="w-full">
-            Save Formula
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject</Label>
+              <Select
+                value={formula.subject}
+                onValueChange={(value) => setFormula({ ...formula, subject: value as any })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="physics">Physics</SelectItem>
+                  <SelectItem value="chemistry">Chemistry</SelectItem>
+                  <SelectItem value="mathematics">Mathematics</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Input
+                id="category"
+                value={formula.category}
+                onChange={(e) => setFormula({ ...formula, category: e.target.value })}
+                placeholder="Enter category"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert>
+              <AlertTitle>Success</AlertTitle>
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <Button type="submit" disabled={isSaving} className="w-full">
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Formula
+              </>
+            )}
           </Button>
         </form>
       </CardContent>
