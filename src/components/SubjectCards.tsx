@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Calculator, Atom, Flask } from 'lucide-react';
+import { Calculator, Atom, Beaker } from 'lucide-react';
 
 export const SubjectCards = () => {
   const subjects = [
@@ -33,7 +32,7 @@ export const SubjectCards = () => {
     },
     {
       name: 'Chemistry',
-      icon: Flask,
+      icon: Beaker,
       color: 'from-orange-500 to-orange-600',
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-200',
