@@ -1,41 +1,65 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '../components/ui/button';
+import { FormulaCard } from '../components/FormulaCard';
+import { formulaService } from '../lib/services/formulaService';
+import { Formula } from '../types/formula';
+import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
-import React from 'react';
-import { Header } from '@/components/Header';
-import { FormulaCard } from '@/components/FormulaCard';
-import { physicsFormulas } from '@/data/formulas';
-import { Atom } from 'lucide-react';
+export function PhysicsPage() {
+  const navigate = useNavigate();
+  const [formulas, setFormulas] = useState<Formula[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const PhysicsPage = () => {
+  useEffect(() => {
+    loadFormulas();
+  }, []);
+
+  const loadFormulas = async () => {
+    try {
+      const data = await formulaService.getFormulasBySubject('physics');
+      setFormulas(data);
+    } catch (error) {
+      toast.error('Failed to load formulas');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = () => {
+    navigate('/formulas/new');
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
-      <Header />
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="bg-gradient-to-r from-green-500 to-green-600 p-3 rounded-xl">
-              <Atom className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900">Physics</h1>
-              <p className="text-lg text-gray-600">
-                Fundamental laws and equations of Physics
-              </p>
-            </div>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Physics Formulas</h1>
+        <Button onClick={handleCreate}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Formula
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {formulas.map((formula) => (
+          <FormulaCard
+            key={formula.id}
+            formula={formula}
+            onDelete={loadFormulas}
+          />
+        ))}
+      </div>
+
+      {formulas.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No formulas found. Add your first formula!</p>
         </div>
-        
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {physicsFormulas.map((formula) => (
-            <FormulaCard 
-              key={formula.id} 
-              formula={formula} 
-              subjectColor="green"
-            />
-          ))}
-        </div>
-      </main>
+      )}
     </div>
   );
-};
-
-export default PhysicsPage;
+}
